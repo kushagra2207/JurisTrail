@@ -74,3 +74,61 @@ export const retainInvestigationList = async (caseId, investigationItems) => {
   }
   return results;
 };
+
+/**
+ * Helper to parse recalled Hindsight memories with a specific prefix.
+ */
+const parseMemories = (recalled, prefix) => {
+  const memories = recalled?.memories || recalled?.results || [];
+  const list = [];
+  for (const mem of memories) {
+    const content = typeof mem === 'string' ? mem : (mem?.content || '');
+    if (content && content.startsWith(prefix)) {
+      try {
+        const parsed = JSON.parse(content.substring(prefix.length));
+        list.push({
+          id: mem.id || parsed.id,
+          ...parsed
+        });
+      } catch (e) {
+        console.warn(`Failed to parse memory contents for prefix ${prefix}:`, e.message);
+      }
+    } else if (content) {
+      // Fallback: try parsing the whole string if it's JSON
+      try {
+        const parsed = JSON.parse(content);
+        list.push({
+          id: mem.id || parsed.id,
+          ...parsed
+        });
+      } catch (e) {
+        // Not JSON
+      }
+    }
+  }
+  return list;
+};
+
+/**
+ * Recall and parse all evidence items for a case.
+ */
+export const recallEvidenceList = async (caseId) => {
+  const recalled = await recallMemory(caseId, '[EVIDENCE]', { budget: 'high' });
+  return parseMemories(recalled, '[EVIDENCE] ');
+};
+
+/**
+ * Recall and parse all timeline entries for a case.
+ */
+export const recallTimelineList = async (caseId) => {
+  const recalled = await recallMemory(caseId, '[TIMELINE]', { budget: 'high' });
+  return parseMemories(recalled, '[TIMELINE] ');
+};
+
+/**
+ * Recall and parse all investigation findings for a case.
+ */
+export const recallInvestigationList = async (caseId) => {
+  const recalled = await recallMemory(caseId, '[INVESTIGATION]', { budget: 'high' });
+  return parseMemories(recalled, '[INVESTIGATION] ');
+};

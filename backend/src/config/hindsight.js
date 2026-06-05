@@ -2,7 +2,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const HINDSIGHT_BASE_URL = process.env.HINDSIGHT_BASE_URL || 'http://localhost:8888';
+let baseUrl = process.env.HINDSIGHT_BASE_URL || 'http://localhost:8888';
+let apiKey = process.env.HINDSIGHT_API_KEY;
+
+// Smart fallback if HINDSIGHT_BASE_URL was configured with the API Key (hsk_...) directly
+if (baseUrl.startsWith('hsk_')) {
+  apiKey = baseUrl;
+  baseUrl = 'https://api.hindsight.vectorize.io';
+}
 
 /**
  * Hindsight REST API client.
@@ -10,8 +17,16 @@ const HINDSIGHT_BASE_URL = process.env.HINDSIGHT_BASE_URL || 'http://localhost:8
  * Works with both self-hosted and cloud deployments.
  */
 class HindsightClient {
-  constructor(baseUrl) {
+  constructor(baseUrl, apiKey) {
     this.baseUrl = baseUrl.replace(/\/+$/, ''); // strip trailing slash
+    this.apiKey = apiKey;
+  }
+
+  getHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` }),
+    };
   }
 
   /**
@@ -19,10 +34,10 @@ class HindsightClient {
    * Hindsight auto-creates banks on first retain.
    */
   async retain(bankId, content) {
-    const res = await fetch(`${this.baseUrl}/v1/default/banks/${bankId}/retain`, {
+    const res = await fetch(`${this.baseUrl}/v1/default/banks/${bankId}/memories`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
+      headers: this.getHeaders(),
+      body: JSON.stringify({ items: [{ content }] }),
     });
     if (!res.ok) {
       const errBody = await res.text();
@@ -43,12 +58,15 @@ class HindsightClient {
       ...(options.types && { types: options.types }),
       budget: options.budget || 'high',
     };
-    const res = await fetch(`${this.baseUrl}/v1/default/banks/${bankId}/recall`, {
+    const res = await fetch(`${this.baseUrl}/v1/default/banks/${bankId}/memories/recall`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getHeaders(),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
+      if (res.status === 404) {
+        return { memories: [], results: [] }; // Bank does not exist yet (no retains done)
+      }
       const errBody = await res.text();
       throw new Error(`Hindsight recall failed (${res.status}): ${errBody}`);
     }
@@ -65,10 +83,13 @@ class HindsightClient {
     };
     const res = await fetch(`${this.baseUrl}/v1/default/banks/${bankId}/reflect`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.getHeaders(),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
+      if (res.status === 404) {
+        return { reflection: '', result: '' }; // Bank does not exist yet (no retains done)
+      }
       const errBody = await res.text();
       throw new Error(`Hindsight reflect failed (${res.status}): ${errBody}`);
     }
@@ -76,6 +97,6 @@ class HindsightClient {
   }
 }
 
-const hindsightClient = new HindsightClient(HINDSIGHT_BASE_URL);
+const hindsightClient = new HindsightClient(baseUrl, apiKey);
 
 export default hindsightClient;
