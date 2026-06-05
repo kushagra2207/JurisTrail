@@ -2,6 +2,8 @@ import cloudinary from '../config/cloudinary.js';
 import { query } from '../config/db.js';
 import { extractTextFromPDF } from '../utils/pdf.js';
 import { runPipeline } from '../services/pipeline.service.js';
+import { recallEvidenceList } from '../services/hindsight.service.js';
+import { formatBytes } from '../utils/helpers.js';
 
 /**
  * Upload a buffer to Cloudinary as a raw file.
@@ -42,15 +44,63 @@ export const listDocuments = async (req, res) => {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    const result = await query(
-      `SELECT id, original_name, cloudinary_url, cloudinary_public_id, file_size, mime_type, processing_status, uploaded_at
+    // Get documents from database
+    const dbDocsResult = await query(
+      `SELECT id, original_name, cloudinary_url, file_size, mime_type, processing_status, uploaded_at
        FROM documents
        WHERE case_id = $1
        ORDER BY uploaded_at DESC`,
       [caseId]
     );
 
-    return res.json({ documents: result.rows });
+    // Get evidence items from Hindsight memory bank
+    let evidenceList = [];
+    try {
+      evidenceList = await recallEvidenceList(caseId);
+    } catch (err) {
+      console.warn('Could not retrieve evidence list from Hindsight, using empty arrays:', err.message);
+    }
+
+    const documents = dbDocsResult.rows.map((row) => {
+      // Find all evidence extracted from this document
+      const docEvidence = evidenceList.filter(e => e.source_document === row.original_name);
+
+      // Collect resolved entities
+      const entities = [];
+      const seenEntityNames = new Set();
+      for (const item of docEvidence) {
+        if (item.entities && Array.isArray(item.entities)) {
+          for (const ent of item.entities) {
+            if (ent && ent.name && !seenEntityNames.has(ent.name.toLowerCase())) {
+              seenEntityNames.add(ent.name.toLowerCase());
+              entities.push(ent);
+            }
+          }
+        }
+      }
+
+      // Collect factual assertions
+      const assertions = docEvidence.flatMap((item) => {
+        if (item.key_claims && Array.isArray(item.key_claims) && item.key_claims.length > 0) {
+          return item.key_claims;
+        }
+        return item.content ? [item.content] : [];
+      });
+
+      return {
+        id: row.id,
+        name: row.original_name,
+        size: formatBytes(row.file_size),
+        uploadedAt: row.uploaded_at ? new Date(row.uploaded_at).toISOString().split('T')[0] : '',
+        processingStatus: row.processing_status,
+        cloudinaryUrl: row.cloudinary_url,
+        mimeType: row.mime_type,
+        entities,
+        assertions
+      };
+    });
+
+    return res.json(documents);
   } catch (error) {
     console.error('List documents error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -193,6 +243,117 @@ export const deleteDocument = async (req, res) => {
     return res.json({ message: 'Document deleted successfully.' });
   } catch (error) {
     console.error('Delete document error:', error.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+/**
+ * GET /api/cases/:caseId/documents/:docId/status
+ * Check the processing status of a document.
+ */
+export const getDocumentStatus = async (req, res) => {
+  try {
+    const { caseId, docId } = req.params;
+
+    // Verify case ownership
+    const caseCheck = await query(
+      'SELECT id FROM cases WHERE id = $1 AND user_id = $2',
+      [caseId, req.user.id]
+    );
+    if (caseCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Case not found.' });
+    }
+
+    const result = await query(
+      'SELECT processing_status, processing_error FROM documents WHERE id = $1 AND case_id = $2',
+      [docId, caseId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    return res.json({
+      status: result.rows[0].processing_status,
+      error: result.rows[0].processing_error || null,
+    });
+  } catch (error) {
+    console.error('Get document status error:', error.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+/**
+ * POST /api/cases/:caseId/documents/:docId/reprocess
+ * Re-run the pipeline for a failed document.
+ */
+export const reprocessDocument = async (req, res) => {
+  try {
+    const { caseId, docId } = req.params;
+
+    // Verify case ownership
+    const caseCheck = await query(
+      'SELECT id FROM cases WHERE id = $1 AND user_id = $2',
+      [caseId, req.user.id]
+    );
+    if (caseCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Case not found.' });
+    }
+
+    // Find the document
+    const docResult = await query(
+      'SELECT id, original_name, cloudinary_url, processing_status FROM documents WHERE id = $1 AND case_id = $2',
+      [docId, caseId]
+    );
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found.' });
+    }
+
+    const doc = docResult.rows[0];
+
+    if (doc.processing_status === 'processing') {
+      return res.status(409).json({ error: 'Document is already being processed.' });
+    }
+
+    // Download PDF from Cloudinary and re-extract text
+    const pdfResponse = await fetch(doc.cloudinary_url);
+    if (!pdfResponse.ok) {
+      return res.status(500).json({ error: 'Failed to download document from storage.' });
+    }
+    const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
+
+    let pdfText;
+    try {
+      pdfText = await extractTextFromPDF(pdfBuffer);
+    } catch (err) {
+      return res.status(422).json({ error: 'Failed to extract text from stored PDF.' });
+    }
+
+    if (!pdfText || pdfText.trim().length === 0) {
+      return res.status(422).json({ error: 'PDF contains no extractable text.' });
+    }
+
+    // Reset status
+    await query(
+      'UPDATE documents SET processing_status = $1, processing_error = NULL WHERE id = $2',
+      ['pending', docId]
+    );
+
+    // Respond and run pipeline async
+    res.json({ message: 'Reprocessing started.', status: 'pending' });
+
+    runPipeline(caseId, docId, pdfText, doc.original_name)
+      .then((results) => {
+        console.log(`✅ Reprocess pipeline complete for document ${docId}:`, {
+          evidence: results.evidence.length,
+          timeline: results.timeline.length,
+          investigations: results.investigations.length,
+        });
+      })
+      .catch((err) => {
+        console.error(`❌ Reprocess pipeline failed for document ${docId}:`, err.message);
+      });
+  } catch (error) {
+    console.error('Reprocess document error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 };

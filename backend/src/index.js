@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+import { initDb } from './config/db.js';
+
 // Import routes
 import authRoutes from './routes/auth.routes.js';
 import caseRoutes from './routes/case.routes.js';
@@ -76,10 +78,13 @@ app.use((req, res) => {
 // ──────────────────────────────────────────────
 // Start Server
 // ──────────────────────────────────────────────
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\nJurisTrail Backend running on port ${PORT}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  
+  // Initialize database schema
+  await initDb();
 });
 
 export default app;

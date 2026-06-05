@@ -4,6 +4,8 @@ import {
   listDocuments,
   uploadDocument,
   deleteDocument,
+  getDocumentStatus,
+  reprocessDocument,
 } from '../controllers/document.controller.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -30,5 +32,7 @@ router.use(authenticate);
 router.get('/', listDocuments);
 router.post('/', upload.single('file'), uploadDocument);
 router.delete('/:docId', deleteDocument);
+router.get('/:docId/status', getDocumentStatus);
+router.post('/:docId/reprocess', reprocessDocument);
 
 export default router;
