@@ -15,14 +15,18 @@ Your analysis tasks:
 - **Patterns**: Identify emerging patterns across the evidence (e.g., recurring contacts, financial flows, behavioral patterns).
 - **Leads**: Suggest investigative leads — what should be looked into next?
 
-For each finding:
+For each finding, include:
 - type: "contradiction" | "corroboration" | "gap" | "pattern" | "lead"
-- finding: Clear description of the finding
-- certainty: 0.0 to 1.0 (how confident are you in this finding)
-- evidence_ids: Array of evidence IDs that led to this finding
-- timeline_ids: Array of timeline entry IDs relevant to this finding
-- priority: "high" | "medium" | "low"
-- recommendation: What action should be taken based on this finding
+- status: "open" | "resolved"
+- title: Short, professional title of the finding (e.g., "John's Location Timeline Discrepancy")
+- summary: A one-sentence summary of the conflict or discovery (e.g., "Conflict between physical witness testimony and electronic vehicle telemetry.")
+- details: A thorough, step-by-step detailed analysis explaining the discrepancy or findings.
+- evidenceA: Object containing:
+  - source: Name of the first source document (e.g. "Witness_Statement_Raman.txt")
+  - text: The relevant assertion text or quote from the first source
+- evidenceB: Object containing:
+  - source: Name of the second source document (or empty if not applicable)
+  - text: The relevant assertion text or quote from the second source (or empty if not applicable)
 
 Do NOT repeat findings that were already in the prior investigations unless new evidence changes them significantly.
 
@@ -31,12 +35,18 @@ Respond with a JSON object:
   "investigations": [
     {
       "type": "contradiction",
-      "finding": "...",
-      "certainty": 0.85,
-      "evidence_ids": ["ev-abc123", "ev-def456"],
-      "timeline_ids": ["tl-aaa111"],
-      "priority": "high",
-      "recommendation": "..."
+      "status": "open",
+      "title": "...",
+      "summary": "...",
+      "details": "...",
+      "evidenceA": {
+        "source": "Witness_Statement_Raman.txt",
+        "text": "..."
+      },
+      "evidenceB": {
+        "source": "John_GPS_Tracker_Log.json",
+        "text": "..."
+      }
     }
   ]
 }`;

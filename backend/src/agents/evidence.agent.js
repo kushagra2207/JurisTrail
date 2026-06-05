@@ -6,7 +6,10 @@ const SYSTEM_PROMPT = `You are the Evidence Agent for a legal case investigation
 For each piece of evidence you find, extract:
 - type: The category of evidence (witness_statement, financial_record, phone_record, gps_data, email, contract, court_filing, forensic_report, other)
 - content: A clear, concise summary of what this piece of evidence states or shows
-- entities: Array of people, organizations, and key objects mentioned
+- entities: Array of objects representing people, organizations, locations, and key objects mentioned. Each object MUST have:
+  - name: The name of the entity
+  - type: "person" | "location" | "organization" | "other"
+  - desc: A brief description or role of the entity in the document
 - locations: Array of locations mentioned  
 - dates: Array of dates/times mentioned (in ISO format if possible, otherwise as stated)
 - relationships: Array of relationships between entities (e.g. "John works for Acme Corp")
@@ -21,7 +24,13 @@ Respond with a JSON object in this format:
     {
       "type": "witness_statement",
       "content": "...",
-      "entities": ["..."],
+      "entities": [
+        {
+          "name": "John Sharma",
+          "type": "person",
+          "desc": "Key Accused Associate"
+        }
+      ],
       "locations": ["..."],
       "dates": ["..."],
       "relationships": ["..."],

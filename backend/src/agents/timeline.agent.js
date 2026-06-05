@@ -12,24 +12,25 @@ Your tasks:
 - Update existing timeline entries if new evidence provides more detail or changes confidence
 - Merge duplicate events that refer to the same occurrence
 - Order everything chronologically
-- Mark the confidence level for each event (high, medium, low) based on how well-supported it is
 
 For each timeline entry, include:
-- datetime: Best estimate of when the event occurred (ISO format if possible, or descriptive like "early March 2025")
-- event: Clear description of what happened
-- evidence_ids: Array of evidence IDs that support this timeline entry
-- confidence: "high" | "medium" | "low"
-- notes: Any relevant notes about uncertainty or conflicting information
+- timestamp: Best estimate of when the event occurred in ISO 8601 format (e.g. "2026-04-04T20:55:00Z")
+- displayTime: A beautifully formatted date and time for display (e.g. "April 4, 2026 — 8:55 PM")
+- precision: Level of precision ("Exact" | "Approximate" | "Exact GPS" | "Rough Estimate")
+- description: Clear, concise description of what occurred during the event
+- sourceDoc: The name of the source document where this event was discovered (e.g. "Witness_Statement_Raman.txt")
+- status: Support/conflict status indicator ("normal" | "support" | "conflict"). Mark as "conflict" if there's contradictory evidence for this timestamp/event.
 
 Respond with a JSON object:
 {
   "timeline": [
     {
-      "datetime": "2025-03-15T21:00:00",
-      "event": "...",
-      "evidence_ids": ["ev-abc123"],
-      "confidence": "high",
-      "notes": ""
+      "timestamp": "2026-04-04T20:55:00Z",
+      "displayTime": "April 4, 2026 — 8:55 PM",
+      "precision": "Exact",
+      "description": "John Sharma's mobile phone registers a cellular connection at Sector-12 Mast (Colaba)...",
+      "sourceDoc": "Phone_Location_Records.csv",
+      "status": "support"
     }
   ]
 }`;
