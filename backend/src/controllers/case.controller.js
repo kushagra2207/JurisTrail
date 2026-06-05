@@ -1,4 +1,19 @@
 import { query } from '../config/db.js';
+import { formatRelativeTime } from '../utils/helpers.js';
+
+const mapCaseResponse = (row) => ({
+  id: row.id,
+  title: row.title,
+  docket: row.docket || '',
+  court: row.court || '',
+  desc: row.description || '',
+  status: row.status,
+  documentsCount: parseInt(row.documentsCount || row.document_count || 0, 10),
+  contradictionsCount: parseInt(row.contradictionsCount || row.contradictions_count || 0, 10),
+  lastUpdated: formatRelativeTime(row.updated_at),
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
 
 /**
  * GET /api/cases
@@ -7,15 +22,17 @@ import { query } from '../config/db.js';
 export const listCases = async (req, res) => {
   try {
     const result = await query(
-      `SELECT c.id, c.title, c.description, c.status, c.created_at, c.updated_at,
-              (SELECT COUNT(*) FROM documents d WHERE d.case_id = c.id) AS document_count
+      `SELECT c.id, c.title, c.docket, c.court, c.description, c.status, c.created_at, c.updated_at,
+              c.contradictions_count AS "contradictionsCount",
+              (SELECT COUNT(*) FROM documents d WHERE d.case_id = c.id) AS "documentsCount"
        FROM cases c
        WHERE c.user_id = $1
        ORDER BY c.updated_at DESC`,
       [req.user.id]
     );
 
-    return res.json({ cases: result.rows });
+    const mapped = result.rows.map(mapCaseResponse);
+    return res.json(mapped);
   } catch (error) {
     console.error('List cases error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -28,20 +45,25 @@ export const listCases = async (req, res) => {
  */
 export const createCase = async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const { title, docket, court, desc } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Case title is required.' });
     }
 
     const result = await query(
-      `INSERT INTO cases (user_id, title, description)
-       VALUES ($1, $2, $3)
-       RETURNING id, title, description, status, created_at, updated_at`,
-      [req.user.id, title, description || null]
+      `INSERT INTO cases (user_id, title, docket, court, description)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, title, docket, court, description, status, contradictions_count, created_at, updated_at`,
+      [req.user.id, title, docket || null, court || null, desc || null]
     );
 
-    return res.status(201).json({ case: result.rows[0] });
+    const newCase = mapCaseResponse({
+      ...result.rows[0],
+      document_count: 0
+    });
+
+    return res.status(201).json(newCase);
   } catch (error) {
     console.error('Create case error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -57,8 +79,9 @@ export const getCase = async (req, res) => {
     const { id } = req.params;
 
     const result = await query(
-      `SELECT c.id, c.title, c.description, c.status, c.created_at, c.updated_at,
-              (SELECT COUNT(*) FROM documents d WHERE d.case_id = c.id) AS document_count
+      `SELECT c.id, c.title, c.docket, c.court, c.description, c.status, c.created_at, c.updated_at,
+              c.contradictions_count AS "contradictionsCount",
+              (SELECT COUNT(*) FROM documents d WHERE d.case_id = c.id) AS "documentsCount"
        FROM cases c
        WHERE c.id = $1 AND c.user_id = $2`,
       [id, req.user.id]
@@ -68,7 +91,7 @@ export const getCase = async (req, res) => {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    return res.json({ case: result.rows[0] });
+    return res.json(mapCaseResponse(result.rows[0]));
   } catch (error) {
     console.error('Get case error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -82,7 +105,7 @@ export const getCase = async (req, res) => {
 export const updateCase = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, status } = req.body;
+    const { title, docket, court, desc, status } = req.body;
 
     // Verify ownership
     const existing = await query(
@@ -96,15 +119,19 @@ export const updateCase = async (req, res) => {
     const result = await query(
       `UPDATE cases
        SET title = COALESCE($1, title),
-           description = COALESCE($2, description),
-           status = COALESCE($3, status),
+           docket = COALESCE($2, docket),
+           court = COALESCE($3, court),
+           description = COALESCE($4, description),
+           status = COALESCE($5, status),
            updated_at = NOW()
-       WHERE id = $4
-       RETURNING id, title, description, status, created_at, updated_at`,
-      [title, description, status, id]
+       WHERE id = $6
+       RETURNING id, title, docket, court, description, status, contradictions_count, created_at, updated_at`,
+      [title, docket, court, desc, status, id]
     );
 
-    return res.json({ case: result.rows[0] });
+    const updated = mapCaseResponse(result.rows[0]);
+
+    return res.json(updated);
   } catch (error) {
     console.error('Update case error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });

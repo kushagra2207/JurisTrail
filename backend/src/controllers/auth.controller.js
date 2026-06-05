@@ -35,9 +35,9 @@ export const signup = async (req, res) => {
 
     // Insert user
     const result = await query(
-      `INSERT INTO users (name, email, password_hash, firm_name)
+      `INSERT INTO users (name, email, password_hash, enrollment_number)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, name, email, firm_name, created_at`,
+       RETURNING id, name, email, enrollment_number, created_at`,
       [name, email.toLowerCase(), passwordHash, firmName || null]
     );
 
@@ -51,9 +51,9 @@ export const signup = async (req, res) => {
       token,
       user: {
         id: user.id,
-        name: user.name,
+        username: user.name,
         email: user.email,
-        firmName: user.firm_name,
+        barId: user.enrollment_number,
         createdAt: user.created_at,
       },
     });
@@ -77,7 +77,7 @@ export const login = async (req, res) => {
 
     // Find user
     const result = await query(
-      'SELECT id, name, email, password_hash, firm_name, created_at FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, enrollment_number, created_at FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
 
@@ -101,9 +101,9 @@ export const login = async (req, res) => {
       token,
       user: {
         id: user.id,
-        name: user.name,
+        username: user.name,
         email: user.email,
-        firmName: user.firm_name,
+        barId: user.enrollment_number,
         createdAt: user.created_at,
       },
     });
@@ -120,7 +120,7 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const result = await query(
-      'SELECT id, name, email, firm_name, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, enrollment_number, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
 
@@ -133,9 +133,9 @@ export const getMe = async (req, res) => {
     return res.json({
       user: {
         id: user.id,
-        name: user.name,
+        username: user.name,
         email: user.email,
-        firmName: user.firm_name,
+        barId: user.enrollment_number,
         createdAt: user.created_at,
       },
     });

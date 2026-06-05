@@ -1,4 +1,4 @@
-import { recallMemory, reflectMemory } from '../services/hindsight.service.js';
+import { recallMemory, reflectMemory, recallEvidenceList, recallTimelineList, recallInvestigationList } from '../services/hindsight.service.js';
 import { chatCompletion } from '../services/llm.service.js';
 import { query } from '../config/db.js';
 
@@ -63,6 +63,7 @@ ${reflectionContext || '(No reflection available)'}`;
     const answer = await chatCompletion(systemPrompt, message, { maxTokens: 4096 });
 
     return res.json({
+      response: answer,
       answer,
       metadata: {
         hasRecalledContext: !!recalledContext,
@@ -94,17 +95,12 @@ export const getEvidence = async (req, res) => {
 
     let evidence = [];
     try {
-      const recalled = await recallMemory(
-        caseId,
-        'retrieve all evidence items [EVIDENCE]. Return every piece of evidence stored.',
-        { budget: 'high' }
-      );
-      evidence = recalled?.memories || recalled?.results || [];
+      evidence = await recallEvidenceList(caseId);
     } catch (err) {
       console.warn('Evidence recall failed:', err.message);
     }
 
-    return res.json({ evidence });
+    return res.json(evidence);
   } catch (error) {
     console.error('Get evidence error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -129,18 +125,15 @@ export const getTimeline = async (req, res) => {
     }
 
     let timeline = [];
+    let recallError = null;
     try {
-      const recalled = await recallMemory(
-        caseId,
-        'retrieve complete chronological timeline [TIMELINE]. Return all timeline entries.',
-        { budget: 'high' }
-      );
-      timeline = recalled?.memories || recalled?.results || [];
+      timeline = await recallTimelineList(caseId);
     } catch (err) {
       console.warn('Timeline recall failed:', err.message);
+      recallError = err.message;
     }
 
-    return res.json({ timeline });
+    return res.json({ data: timeline, error: recallError });
   } catch (error) {
     console.error('Get timeline error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -165,18 +158,15 @@ export const getInvestigations = async (req, res) => {
     }
 
     let investigations = [];
+    let recallError = null;
     try {
-      const recalled = await recallMemory(
-        caseId,
-        'retrieve all investigation findings [INVESTIGATION]. Return contradictions, corroborations, gaps, patterns, and leads.',
-        { budget: 'high' }
-      );
-      investigations = recalled?.memories || recalled?.results || [];
+      investigations = await recallInvestigationList(caseId);
     } catch (err) {
       console.warn('Investigations recall failed:', err.message);
+      recallError = err.message;
     }
 
-    return res.json({ investigations });
+    return res.json({ data: investigations, error: recallError });
   } catch (error) {
     console.error('Get investigations error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
