@@ -2,10 +2,12 @@ import { extractEvidence } from '../agents/evidence.agent.js';
 import { updateTimeline } from '../agents/timeline.agent.js';
 import { analyzeCase } from '../agents/investigation.agent.js';
 import {
-  recallMemory,
   retainEvidenceList,
   retainTimelineList,
   retainInvestigationList,
+  recallEvidenceList,
+  recallTimelineList,
+  recallInvestigationList
 } from './hindsight.service.js';
 import { query } from '../config/db.js';
 
@@ -29,7 +31,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
   try {
     // Mark document as processing
     await query(
-      'UPDATE documents SET processing_status = $1 WHERE id = $2',
+      "UPDATE documents SET processing_status = $1 WHERE id = $2",
       ['processing', documentId]
     );
 
@@ -39,7 +41,12 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // STEP 1: Evidence Agent
     // ──────────────────────────────────────────────
     console.log('🔍 [Pipeline] Step 1: Extracting evidence...');
-    const newEvidence = await extractEvidence(pdfText, documentName);
+    let newEvidence;
+    try {
+      newEvidence = await extractEvidence(pdfText, documentName);
+    } catch (err) {
+      throw new Error(`Evidence Agent failed: ${err.message}`);
+    }
     console.log(`   Found ${newEvidence.length} evidence items`);
 
     // Store new evidence in Hindsight
@@ -55,8 +62,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // Recall all evidence from memory
     let allEvidenceData = [];
     try {
-      const evidenceRecall = await recallMemory(caseId, 'all evidence items [EVIDENCE]');
-      allEvidenceData = evidenceRecall?.memories || evidenceRecall?.results || [];
+      allEvidenceData = await recallEvidenceList(caseId);
     } catch (err) {
       console.warn('   Could not recall evidence, using new evidence only:', err.message);
       allEvidenceData = newEvidence;
@@ -65,16 +71,20 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // Recall existing timeline
     let existingTimeline = [];
     try {
-      const timelineRecall = await recallMemory(caseId, 'complete timeline [TIMELINE]');
-      existingTimeline = timelineRecall?.memories || timelineRecall?.results || [];
+      existingTimeline = await recallTimelineList(caseId);
     } catch (err) {
       console.warn('   No existing timeline found:', err.message);
     }
 
-    const updatedTimeline = await updateTimeline(
-      allEvidenceData.length > 0 ? allEvidenceData : newEvidence,
-      existingTimeline
-    );
+    let updatedTimeline;
+    try {
+      updatedTimeline = await updateTimeline(
+        allEvidenceData.length > 0 ? allEvidenceData : newEvidence,
+        existingTimeline
+      );
+    } catch (err) {
+      throw new Error(`Timeline Agent failed: ${err.message}`);
+    }
     console.log(`   Generated ${updatedTimeline.length} timeline entries`);
 
     // Store timeline in Hindsight
@@ -90,17 +100,21 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // Recall prior investigations
     let priorInvestigations = [];
     try {
-      const invRecall = await recallMemory(caseId, 'investigation findings [INVESTIGATION]');
-      priorInvestigations = invRecall?.memories || invRecall?.results || [];
+      priorInvestigations = await recallInvestigationList(caseId);
     } catch (err) {
       console.warn('   No prior investigations found:', err.message);
     }
 
-    const investigationFindings = await analyzeCase(
-      allEvidenceData.length > 0 ? allEvidenceData : newEvidence,
-      updatedTimeline,
-      priorInvestigations
-    );
+    let investigationFindings;
+    try {
+      investigationFindings = await analyzeCase(
+        allEvidenceData.length > 0 ? allEvidenceData : newEvidence,
+        updatedTimeline,
+        priorInvestigations
+      );
+    } catch (err) {
+      throw new Error(`Investigation Agent failed: ${err.message}`);
+    }
     console.log(`   Generated ${investigationFindings.length} investigation findings`);
 
     // Store investigation results in Hindsight
@@ -108,9 +122,16 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
       await retainInvestigationList(caseId, investigationFindings);
     }
 
+    // Update case contradictions count in PostgreSQL
+    const contradictionsCount = investigationFindings.filter(f => f.type === 'contradiction').length;
+    await query(
+      'UPDATE cases SET contradictions_count = $1, updated_at = NOW() WHERE id = $2',
+      [contradictionsCount, caseId]
+    );
+
     // Mark document as completed
     await query(
-      'UPDATE documents SET processing_status = $1 WHERE id = $2',
+      "UPDATE documents SET processing_status = $1 WHERE id = $2",
       ['completed', documentId]
     );
 
@@ -124,10 +145,10 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
   } catch (error) {
     console.error(`❌ [Pipeline] Failed for doc "${documentName}":`, error.message);
 
-    // Mark document as failed
+    // Mark document as failed and store the error message
     await query(
-      'UPDATE documents SET processing_status = $1 WHERE id = $2',
-      ['failed', documentId]
+      "UPDATE documents SET processing_status = $1, processing_error = $2 WHERE id = $3",
+      ['failed', error.message || 'Unknown pipeline error', documentId]
     ).catch(() => {}); // don't let status update failure mask the real error
 
     throw error;
