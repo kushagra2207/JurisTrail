@@ -14,8 +14,11 @@ CREATE TABLE IF NOT EXISTS cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(500) NOT NULL,
+    docket VARCHAR(255),
+    court VARCHAR(255),
     description TEXT,
     status VARCHAR(50) DEFAULT 'active',
+    contradictions_count INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -35,3 +38,6 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 
 CREATE INDEX IF NOT EXISTS idx_documents_case_id ON documents(case_id);
+
+-- Migration: Add processing_error column to documents
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS processing_error TEXT;
