@@ -95,6 +95,24 @@ class HindsightClient {
     }
     return res.json();
   }
+
+  /**
+   * Delete a memory bank completely.
+   */
+  async deleteBank(bankId) {
+    const res = await fetch(`${this.baseUrl}/v1/default/banks/${bankId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    if (!res.ok) {
+      if (res.status === 404) {
+        return { message: 'Bank not found' };
+      }
+      const errBody = await res.text();
+      throw new Error(`Hindsight delete bank failed (${res.status}): ${errBody}`);
+    }
+    return res.json().catch(() => ({ message: 'Bank deleted' }));
+  }
 }
 
 const hindsightClient = new HindsightClient(baseUrl, apiKey);

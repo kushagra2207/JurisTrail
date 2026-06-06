@@ -132,3 +132,11 @@ export const recallInvestigationList = async (caseId) => {
   const recalled = await recallMemory(caseId, '[INVESTIGATION]', { budget: 'high' });
   return parseMemories(recalled, '[INVESTIGATION] ');
 };
+
+/**
+ * Delete a case's Hindsight bank completely.
+ */
+export const deleteCaseBank = async (caseId) => {
+  const bankId = getCaseBankId(caseId);
+  return hindsightClient.deleteBank(bankId);
+};

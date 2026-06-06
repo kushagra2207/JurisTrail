@@ -1,5 +1,6 @@
 import { query } from '../config/db.js';
 import { formatRelativeTime } from '../utils/helpers.js';
+import { deleteCaseBank } from '../services/hindsight.service.js';
 
 const mapCaseResponse = (row) => ({
   id: row.id,
@@ -153,6 +154,13 @@ export const deleteCase = async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Case not found.' });
+    }
+
+    // Safely delete corresponding bank on Hindsight
+    try {
+      await deleteCaseBank(id);
+    } catch (err) {
+      console.warn(`Could not delete Hindsight bank for case ${id}:`, err.message);
     }
 
     return res.json({ message: 'Case deleted successfully.' });

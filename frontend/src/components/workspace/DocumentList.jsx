@@ -1,6 +1,6 @@
 import DocumentCard from './DocumentCard';
 
-export default function DocumentList({ documents, selectedDocument, onSelectDocument, onRetryDocument }) {
+export default function DocumentList({ documents, selectedDocument, onSelectDocument, onRetryDocument, onDeleteDocument }) {
     return (
         <>
             <div className="section-title text-[12px] uppercase font-heading font-bold text-[#4a4e52] mb-3.5 tracking-wider">Ingested Case Documents</div>
@@ -17,6 +17,7 @@ export default function DocumentList({ documents, selectedDocument, onSelectDocu
                             isSelected={selectedDocument?.id === doc.id}
                             onSelect={() => onSelectDocument(doc)}
                             onRetry={onRetryDocument}
+                            onDelete={onDeleteDocument}
                         />
                     ))
                 )}

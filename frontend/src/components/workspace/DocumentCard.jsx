@@ -1,4 +1,4 @@
-export default function DocumentCard({ doc, isSelected, onSelect, onRetry }) {
+export default function DocumentCard({ doc, isSelected, onSelect, onRetry, onDelete }) {
     const statusConfig = {
         pending: { label: 'Pending', color: 'bg-[#d97706] text-white', icon: 'fa-clock', pulse: false },
         processing: { label: 'Processing', color: 'bg-[#2563eb] text-white', icon: 'fa-gear fa-spin', pulse: true },
@@ -44,7 +44,17 @@ export default function DocumentCard({ doc, isSelected, onSelect, onRetry }) {
                 >
                     <i className="fa-solid fa-brain"></i>
                 </button>
+                {onDelete && (
+                    <button 
+                        className="btn-icon p-1 text-[#4a4e52] hover:text-[#8b0000] hover:bg-[#8b0000]/10 rounded transition-colors" 
+                        title="Delete Document" 
+                        onClick={(e) => { e.stopPropagation(); onDelete(doc); }}
+                    >
+                        <i className="fa-solid fa-trash-can"></i>
+                    </button>
+                )}
             </div>
         </div>
     );
 }
+

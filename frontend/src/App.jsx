@@ -491,6 +491,40 @@ export default function App() {
         }
     };
 
+    const handleDeleteDocument = async (doc) => {
+        if (!selectedCase) return;
+        if (!confirm(`Are you sure you want to permanently delete "${doc.name}"? This will remove the file from cloud storage and all associated data.`)) {
+            return;
+        }
+
+        try {
+            await api.cases.deleteDocument(selectedCase.id, doc.id);
+
+            // Remove from local state
+            setDocuments(prev => prev.filter(d => d.id !== doc.id));
+
+            // Clear selection if this doc was selected
+            if (selectedDocument?.id === doc.id) {
+                setSelectedDocument(null);
+            }
+
+            // Refresh timeline and insights since they may reference this document
+            try {
+                const timelineRes = await api.cases.getTimeline(selectedCase.id);
+                const insightsRes = await api.cases.getInsights(selectedCase.id);
+                setTimeline(Array.isArray(timelineRes) ? timelineRes : (timelineRes.data || []));
+                setInsights(Array.isArray(insightsRes) ? insightsRes : (insightsRes.data || []));
+            } catch (refreshErr) {
+                console.warn('Could not refresh analysis data after delete:', refreshErr.message);
+            }
+
+            addAssistantMessage(`🗑️ Document **${doc.name}** has been permanently deleted.`);
+        } catch (error) {
+            console.error('Delete document failed:', error);
+            alert('Failed to delete document: ' + error.message);
+        }
+    };
+
     // ==========================================================================
     // CHAT SYSTEM METHODS
     // ==========================================================================
@@ -661,6 +695,7 @@ export default function App() {
                                 selectedDocument={selectedDocument}
                                 onSelectDocument={setSelectedDocument}
                                 onRetryDocument={handleRetryDocument}
+                                onDeleteDocument={handleDeleteDocument}
                             />
 
                             <FactBox 
