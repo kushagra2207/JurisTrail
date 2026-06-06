@@ -4,7 +4,7 @@ import { safeParseJSON, generateId } from '../utils/helpers.js';
 const SYSTEM_PROMPT = `You are the Investigation Agent for a legal case investigation system. Your job is to analyze all accumulated evidence, the timeline, and prior investigations to find patterns, contradictions, and investigative leads.
 
 You receive:
-1. ALL evidence collected so far
+1. ALL evidence collected so far (from all documents in the case)
 2. The current TIMELINE of events
 3. PRIOR investigation findings (may be empty on first run)
 
@@ -28,7 +28,11 @@ For each finding, include:
   - source: Name of the second source document (or empty if not applicable)
   - text: The relevant assertion text or quote from the second source (or empty if not applicable)
 
-Do NOT repeat findings that were already in the prior investigations unless new evidence changes them significantly.
+IMPORTANT: Your response must be the COMPLETE, FULL set of all investigation findings for this case.
+- INCLUDE all prior findings that are still valid and relevant (you may update their status or details if new evidence changes them).
+- ADD any new findings discovered from new evidence.
+- REMOVE only findings that are no longer valid or have been conclusively resolved by new evidence.
+- The output replaces the entire investigation record, so do NOT omit prior findings unless they are truly obsolete.
 
 Respond with a JSON object:
 {

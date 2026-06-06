@@ -5,9 +5,6 @@ import {
   retainEvidenceList,
   retainTimelineList,
   retainInvestigationList,
-  recallEvidenceList,
-  recallTimelineList,
-  recallInvestigationList
 } from './hindsight.service.js';
 import { query } from '../config/db.js';
 
@@ -15,11 +12,12 @@ import { query } from '../config/db.js';
  * Run the full 3-agent pipeline for a newly uploaded document.
  *
  * Flow:
- * 1. Evidence Agent: extract structured evidence from PDF text
- * 2. Timeline Agent: recall existing evidence + timeline, generate updated timeline
- * 3. Investigation Agent: recall everything, find contradictions/patterns/gaps
+ * 1. Evidence Agent: extract structured evidence from PDF text → save to documents.extracted_data + Hindsight
+ * 2. Timeline Agent: gather ALL evidence (from PostgreSQL), generate timeline → save to cases.case_timeline + Hindsight
+ * 3. Investigation Agent: analyze ALL evidence + timeline → save to cases.case_investigations + Hindsight
  *
- * All outputs are stored in Hindsight memory.
+ * PostgreSQL = source of truth for structured UI display (FactBox, Timeline, Insights)
+ * Hindsight = semantic memory for chat recall & reflect
  *
  * @param {string} caseId - UUID of the case
  * @param {string} documentId - UUID of the document (for status updates)
@@ -49,7 +47,13 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     }
     console.log(`   Found ${newEvidence.length} evidence items`);
 
-    // Store new evidence in Hindsight
+    // Persist extracted evidence to PostgreSQL (for FactBox display)
+    await query(
+      'UPDATE documents SET extracted_data = $1 WHERE id = $2',
+      [JSON.stringify({ evidence: newEvidence }), documentId]
+    );
+
+    // Also retain in Hindsight (for chat recall/reflect)
     if (newEvidence.length > 0) {
       await retainEvidenceList(caseId, newEvidence);
     }
@@ -59,35 +63,50 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // ──────────────────────────────────────────────
     console.log('[Pipeline] Step 2: Updating timeline...');
 
-    // Recall all evidence from memory
-    let allEvidenceData = [];
-    try {
-      allEvidenceData = await recallEvidenceList(caseId);
-    } catch (err) {
-      console.warn('   Could not recall evidence, using new evidence only:', err.message);
-      allEvidenceData = newEvidence;
+    // Gather ALL evidence across ALL case documents from PostgreSQL
+    const allDocsResult = await query(
+      `SELECT extracted_data FROM documents
+       WHERE case_id = $1 AND (processing_status = 'completed' OR id = $2)`,
+      [caseId, documentId]
+    );
+    let allEvidence = allDocsResult.rows.flatMap(r => {
+      const data = typeof r.extracted_data === 'string'
+        ? JSON.parse(r.extracted_data)
+        : (r.extracted_data || {});
+      return data.evidence || [];
+    });
+    // Ensure newly extracted evidence is included (may not be in DB yet for current doc)
+    const existingIds = new Set(allEvidence.map(e => e.id));
+    for (const ne of newEvidence) {
+      if (!existingIds.has(ne.id)) {
+        allEvidence.push(ne);
+      }
     }
 
-    // Recall existing timeline
-    let existingTimeline = [];
-    try {
-      existingTimeline = await recallTimelineList(caseId);
-    } catch (err) {
-      console.warn('   No existing timeline found:', err.message);
-    }
+    console.log(`   Total evidence across all documents: ${allEvidence.length}`);
+
+    // Read existing timeline from case record (PostgreSQL)
+    const caseRecord = await query(
+      'SELECT case_timeline, case_investigations FROM cases WHERE id = $1',
+      [caseId]
+    );
+    const existingTimeline = caseRecord.rows[0]?.case_timeline || [];
 
     let updatedTimeline;
     try {
-      updatedTimeline = await updateTimeline(
-        allEvidenceData.length > 0 ? allEvidenceData : newEvidence,
-        existingTimeline
-      );
+      updatedTimeline = await updateTimeline(allEvidence, existingTimeline);
     } catch (err) {
       throw new Error(`Timeline Agent failed: ${err.message}`);
     }
     console.log(`   Generated ${updatedTimeline.length} timeline entries`);
 
-    // Store timeline in Hindsight
+    // Save timeline to PostgreSQL (replaces previous timeline)
+    await query(
+      'UPDATE cases SET case_timeline = $1 WHERE id = $2',
+      [JSON.stringify(updatedTimeline), caseId]
+    );
+
+    // Also retain in Hindsight (for chat recall/reflect)
     if (updatedTimeline.length > 0) {
       await retainTimelineList(caseId, updatedTimeline);
     }
@@ -97,18 +116,13 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // ──────────────────────────────────────────────
     console.log('[Pipeline] Step 3: Running investigation analysis...');
 
-    // Recall prior investigations
-    let priorInvestigations = [];
-    try {
-      priorInvestigations = await recallInvestigationList(caseId);
-    } catch (err) {
-      console.warn('   No prior investigations found:', err.message);
-    }
+    // Read prior investigations from case record (PostgreSQL)
+    const priorInvestigations = caseRecord.rows[0]?.case_investigations || [];
 
     let investigationFindings;
     try {
       investigationFindings = await analyzeCase(
-        allEvidenceData.length > 0 ? allEvidenceData : newEvidence,
+        allEvidence,
         updatedTimeline,
         priorInvestigations
       );
@@ -117,17 +131,17 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     }
     console.log(`   Generated ${investigationFindings.length} investigation findings`);
 
-    // Store investigation results in Hindsight
+    // Save investigations to PostgreSQL (replaces previous investigations)
+    const contradictionsCount = investigationFindings.filter(f => f.type === 'contradiction').length;
+    await query(
+      'UPDATE cases SET case_investigations = $1, contradictions_count = $2, updated_at = NOW() WHERE id = $3',
+      [JSON.stringify(investigationFindings), contradictionsCount, caseId]
+    );
+
+    // Also retain in Hindsight (for chat recall/reflect)
     if (investigationFindings.length > 0) {
       await retainInvestigationList(caseId, investigationFindings);
     }
-
-    // Update case contradictions count in PostgreSQL
-    const contradictionsCount = investigationFindings.filter(f => f.type === 'contradiction').length;
-    await query(
-      'UPDATE cases SET contradictions_count = $1, updated_at = NOW() WHERE id = $2',
-      [contradictionsCount, caseId]
-    );
 
     // Mark document as completed
     await query(

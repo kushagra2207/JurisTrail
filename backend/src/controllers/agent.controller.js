@@ -1,4 +1,4 @@
-import { recallMemory, reflectMemory, recallEvidenceList, recallTimelineList, recallInvestigationList } from '../services/hindsight.service.js';
+import { recallMemory, reflectMemory } from '../services/hindsight.service.js';
 import { chatCompletion } from '../services/llm.service.js';
 import { query } from '../config/db.js';
 
@@ -115,25 +115,17 @@ export const getTimeline = async (req, res) => {
   try {
     const { caseId } = req.params;
 
-    // Verify case ownership
-    const caseCheck = await query(
-      'SELECT id FROM cases WHERE id = $1 AND user_id = $2',
+    // Verify case ownership and fetch timeline from PostgreSQL
+    const caseResult = await query(
+      'SELECT id, case_timeline FROM cases WHERE id = $1 AND user_id = $2',
       [caseId, req.user.id]
     );
-    if (caseCheck.rows.length === 0) {
+    if (caseResult.rows.length === 0) {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    let timeline = [];
-    let recallError = null;
-    try {
-      timeline = await recallTimelineList(caseId);
-    } catch (err) {
-      console.warn('Timeline recall failed:', err.message);
-      recallError = err.message;
-    }
-
-    return res.json({ data: timeline, error: recallError });
+    const timeline = caseResult.rows[0].case_timeline || [];
+    return res.json({ data: timeline, error: null });
   } catch (error) {
     console.error('Get timeline error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -148,25 +140,17 @@ export const getInvestigations = async (req, res) => {
   try {
     const { caseId } = req.params;
 
-    // Verify case ownership
-    const caseCheck = await query(
-      'SELECT id FROM cases WHERE id = $1 AND user_id = $2',
+    // Verify case ownership and fetch investigations from PostgreSQL
+    const caseResult = await query(
+      'SELECT id, case_investigations FROM cases WHERE id = $1 AND user_id = $2',
       [caseId, req.user.id]
     );
-    if (caseCheck.rows.length === 0) {
+    if (caseResult.rows.length === 0) {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    let investigations = [];
-    let recallError = null;
-    try {
-      investigations = await recallInvestigationList(caseId);
-    } catch (err) {
-      console.warn('Investigations recall failed:', err.message);
-      recallError = err.message;
-    }
-
-    return res.json({ data: investigations, error: recallError });
+    const investigations = caseResult.rows[0].case_investigations || [];
+    return res.json({ data: investigations, error: null });
   } catch (error) {
     console.error('Get investigations error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });

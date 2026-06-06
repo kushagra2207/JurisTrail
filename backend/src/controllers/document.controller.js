@@ -2,7 +2,6 @@ import cloudinary from '../config/cloudinary.js';
 import { query } from '../config/db.js';
 import { extractTextFromPDF } from '../utils/pdf.js';
 import { runPipeline } from '../services/pipeline.service.js';
-import { recallEvidenceList } from '../services/hindsight.service.js';
 import { formatBytes } from '../utils/helpers.js';
 
 /**
@@ -44,31 +43,26 @@ export const listDocuments = async (req, res) => {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    // Get documents from database
+    // Get documents from database (including extracted_data for FactBox)
     const dbDocsResult = await query(
-      `SELECT id, original_name, cloudinary_url, file_size, mime_type, processing_status, uploaded_at
+      `SELECT id, original_name, cloudinary_url, file_size, mime_type, processing_status, uploaded_at, extracted_data
        FROM documents
        WHERE case_id = $1
        ORDER BY uploaded_at DESC`,
       [caseId]
     );
 
-    // Get evidence items from Hindsight memory bank
-    let evidenceList = [];
-    try {
-      evidenceList = await recallEvidenceList(caseId);
-    } catch (err) {
-      console.warn('Could not retrieve evidence list from Hindsight, using empty arrays:', err.message);
-    }
-
     const documents = dbDocsResult.rows.map((row) => {
-      // Find all evidence extracted from this document
-      const docEvidence = evidenceList.filter(e => e.source_document === row.original_name);
+      // Read evidence from PostgreSQL extracted_data (set by pipeline)
+      const extractedData = typeof row.extracted_data === 'string'
+        ? JSON.parse(row.extracted_data)
+        : (row.extracted_data || {});
+      const evidence = extractedData.evidence || [];
 
-      // Collect resolved entities
+      // Collect resolved entities (deduplicated)
       const entities = [];
       const seenEntityNames = new Set();
-      for (const item of docEvidence) {
+      for (const item of evidence) {
         if (item.entities && Array.isArray(item.entities)) {
           for (const ent of item.entities) {
             if (ent && ent.name && !seenEntityNames.has(ent.name.toLowerCase())) {
@@ -80,7 +74,7 @@ export const listDocuments = async (req, res) => {
       }
 
       // Collect factual assertions
-      const assertions = docEvidence.flatMap((item) => {
+      const assertions = evidence.flatMap((item) => {
         if (item.key_claims && Array.isArray(item.key_claims) && item.key_claims.length > 0) {
           return item.key_claims;
         }
@@ -135,6 +129,17 @@ export const uploadDocument = async (req, res) => {
     // Validate it's a PDF
     if (file.mimetype !== 'application/pdf') {
       return res.status(400).json({ error: 'Only PDF files are accepted.' });
+    }
+
+    // Prevent duplicate uploads within the same case
+    const existingDoc = await query(
+      'SELECT id, processing_status FROM documents WHERE case_id = $1 AND original_name = $2',
+      [caseId, file.originalname]
+    );
+    if (existingDoc.rows.length > 0) {
+      return res.status(409).json({
+        error: `A document named "${file.originalname}" already exists in this case. Delete it first or rename the file.`
+      });
     }
 
     // Upload to Cloudinary

@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS cases (
     description TEXT,
     status VARCHAR(50) DEFAULT 'active',
     contradictions_count INT DEFAULT 0,
+    case_timeline JSONB DEFAULT '[]',
+    case_investigations JSONB DEFAULT '[]',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -35,7 +37,9 @@ CREATE TABLE IF NOT EXISTS documents (
     mime_type VARCHAR(100) DEFAULT 'application/pdf',
     processing_status VARCHAR(50) DEFAULT 'pending',
     processing_error TEXT,
-    uploaded_at TIMESTAMPTZ DEFAULT NOW()
+    extracted_data JSONB DEFAULT '{}',
+    uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (case_id, original_name)
 );
 
 CREATE INDEX IF NOT EXISTS idx_documents_case_id ON documents(case_id);

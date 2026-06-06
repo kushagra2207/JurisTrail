@@ -98,6 +98,7 @@ export const recallEvidenceList = async (caseId) => {
     content: mem.text || '',
     entities: (mem.entities || []).map(name => ({ name, type: 'other', desc: '' })),
     source_document: mem.document_id || '',
+    chunk_id: mem.chunk_id || '',
     locations: [],
     dates: [mem.occurred_start, mem.occurred_end].filter(Boolean),
     relationships: [],
