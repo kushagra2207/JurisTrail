@@ -34,10 +34,8 @@ CREATE TABLE IF NOT EXISTS documents (
     file_size BIGINT,
     mime_type VARCHAR(100) DEFAULT 'application/pdf',
     processing_status VARCHAR(50) DEFAULT 'pending',
+    processing_error TEXT,
     uploaded_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_documents_case_id ON documents(case_id);
-
--- Migration: Add processing_error column to documents
-ALTER TABLE documents ADD COLUMN IF NOT EXISTS processing_error TEXT;
