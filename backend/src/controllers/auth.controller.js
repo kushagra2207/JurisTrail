@@ -8,7 +8,7 @@ import { generateToken } from '../middleware/auth.js';
  */
 export const signup = async (req, res) => {
   try {
-    const { name, email, password, confirmPassword, firmName } = req.body;
+    const { name, email, password, confirmPassword, enrollmentNumber } = req.body;
 
     // Validation
     if (!name || !email || !password) {
@@ -38,7 +38,7 @@ export const signup = async (req, res) => {
       `INSERT INTO users (name, email, password_hash, enrollment_number)
        VALUES ($1, $2, $3, $4)
        RETURNING id, name, email, enrollment_number, created_at`,
-      [name, email.toLowerCase(), passwordHash, firmName || null]
+      [name, email.toLowerCase(), passwordHash, enrollmentNumber || null]
     );
 
     const user = result.rows[0];
