@@ -325,6 +325,9 @@ a:hover {
 .auth-card {
     width: 100%;
     max-width: 440px;
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
     background-color: var(--color-parchment-white);
     border-radius: 6px;
     box-shadow: var(--shadow-premium);
@@ -334,6 +337,7 @@ a:hover {
 
 .auth-tabs {
     display: flex;
+    flex-shrink: 0;
     background-color: var(--color-teak-medium);
     border-bottom: 2px solid var(--color-brass-gold);
 }
@@ -365,8 +369,9 @@ a:hover {
 }
 
 .auth-form {
-    padding: 40px 35px;
+    padding: 30px 25px;
     display: none;
+    overflow-y: auto;
 }
 
 .auth-form.active {

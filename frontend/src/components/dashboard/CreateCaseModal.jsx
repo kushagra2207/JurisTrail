@@ -15,14 +15,14 @@ export default function CreateCaseModal({
 
     return (
         <div className="modal-overlay fixed inset-0 bg-[#190f0a]/70 z-50 flex items-center justify-center backdrop-blur-xs animate-fadeIn">
-            <div className="modal-card bg-[#fcfbf7] border border-[#c5a059] shadow-2xl w-full max-w-[500px] rounded-md overflow-hidden animate-scaleUp">
-                <div className="modal-header bg-[#2a1b12] border-b-2 border-[#c5a059] px-6 py-4 text-white flex justify-between items-center">
+            <div className="modal-card bg-[#fcfbf7] border border-[#c5a059] shadow-2xl w-full max-w-[500px] max-h-[90vh] flex flex-col rounded-md overflow-hidden animate-scaleUp">
+                <div className="modal-header bg-[#2a1b12] border-b-2 border-[#c5a059] px-6 py-4 text-white flex justify-between items-center shrink-0">
                     <h2 className="text-base font-heading font-bold">Initialize Legal Case Archive</h2>
                     <button className="btn-close-modal bg-transparent border-none text-[#e8e3d5] cursor-pointer text-lg hover:text-[#dfb86c]" onClick={onClose}>
                         <i className="fa-solid fa-xmark"></i>
                     </button>
                 </div>
-                <form className="p-6 flex flex-col gap-4 text-xs" onSubmit={onSubmit}>
+                <form className="p-6 flex flex-col gap-4 text-xs overflow-y-auto" onSubmit={onSubmit}>
                     <div className="form-group flex flex-col gap-1.5">
                         <label className="block text-[11px] uppercase font-bold tracking-wider text-[#190f0a]">Case Title (e.g. State of UP v. Rahul Mathur)</label>
                         <input 
