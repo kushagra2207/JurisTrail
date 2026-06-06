@@ -74,7 +74,7 @@ ${priorInvestigations.length > 0 ? JSON.stringify(priorInvestigations, null, 2) 
 
 Analyze the above data thoroughly. Identify contradictions, corroborations, gaps, patterns, and leads.`;
 
-  const responseText = await chatCompletionJSON(SYSTEM_PROMPT, userPrompt, { maxTokens: 8192 });
+  const responseText = await chatCompletionJSON(SYSTEM_PROMPT, userPrompt, { maxTokens: 3000 });
   const parsed = safeParseJSON(responseText);
 
   // Add IDs to investigation items

@@ -50,7 +50,7 @@ ${existingTimeline.length > 0 ? JSON.stringify(existingTimeline, null, 2) : '(No
 
 Based on all the evidence above, generate the complete updated timeline. Include all events, ordered chronologically.`;
 
-  const responseText = await chatCompletionJSON(SYSTEM_PROMPT, userPrompt);
+  const responseText = await chatCompletionJSON(SYSTEM_PROMPT, userPrompt, { maxTokens: 2048 });
   const parsed = safeParseJSON(responseText);
 
   // Add IDs to new timeline entries

@@ -41,12 +41,21 @@ Respond with a JSON object in this format:
 
 /**
  * Extract structured evidence from raw PDF text.
+ * Supports chunking for large documents to prevent token limit errors.
  * @param {string} pdfText - Raw text extracted from the PDF
  * @param {string} documentName - Original filename of the PDF
  * @returns {Promise<Array>} Array of evidence objects with generated IDs
  */
 export const extractEvidence = async (pdfText, documentName) => {
-  const userPrompt = `Document Name: "${documentName}"
+  const maxChunkLength = 15000; // ~3750 tokens
+  
+  if (!pdfText || pdfText.trim().length === 0) {
+    return [];
+  }
+
+  // If the document is small, process in a single request
+  if (pdfText.length <= maxChunkLength) {
+    const userPrompt = `Document Name: "${documentName}"
 
 Extract all evidence from the following document text:
 
@@ -54,15 +63,51 @@ Extract all evidence from the following document text:
 ${pdfText}
 ---`;
 
-  const responseText = await chatCompletionJSON(SYSTEM_PROMPT, userPrompt);
-  const parsed = safeParseJSON(responseText);
+    const responseText = await chatCompletionJSON(SYSTEM_PROMPT, userPrompt, { maxTokens: 2048 });
+    const parsed = safeParseJSON(responseText);
 
-  // Add IDs and source document to each evidence item
-  const evidenceItems = (parsed.evidence || []).map((item) => ({
-    id: generateId('ev'),
-    ...item,
-    source_document: documentName,
-  }));
+    const evidenceItems = (parsed.evidence || []).map((item) => ({
+      id: generateId('ev'),
+      ...item,
+      source_document: documentName,
+    }));
 
-  return evidenceItems;
+    return evidenceItems;
+  }
+
+  // Split into chunks if document text is too large
+  const chunks = [];
+  for (let i = 0; i < pdfText.length; i += maxChunkLength) {
+    chunks.push(pdfText.substring(i, i + maxChunkLength));
+  }
+
+  console.log(`[Evidence Agent] PDF text is large (${pdfText.length} chars). Processing in ${chunks.length} chunks sequentially...`);
+
+  let allEvidence = [];
+  for (let i = 0; i < chunks.length; i++) {
+    console.log(`   Processing chunk ${i + 1}/${chunks.length}...`);
+    const userPrompt = `Document Name: "${documentName}" (Part ${i + 1} of ${chunks.length})
+
+Extract all evidence from the following document text chunk:
+
+---
+${chunks[i]}
+---`;
+
+    try {
+      const responseText = await chatCompletionJSON(SYSTEM_PROMPT, userPrompt, { maxTokens: 2048 });
+      const parsed = safeParseJSON(responseText);
+      const items = (parsed.evidence || []).map((item) => ({
+        id: generateId('ev'),
+        ...item,
+        source_document: documentName,
+      }));
+      allEvidence = allEvidence.concat(items);
+    } catch (err) {
+      console.error(`[Evidence Agent] Error processing chunk ${i + 1}/${chunks.length}:`, err.message);
+      throw err;
+    }
+  }
+
+  return allEvidence;
 };

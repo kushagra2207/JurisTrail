@@ -29,8 +29,21 @@ export const chat = async (req, res) => {
     // Recall relevant memories from Hindsight
     let recalledContext = '';
     try {
-      const recalled = await recallMemory(caseId, message);
-      recalledContext = JSON.stringify(recalled?.memories || recalled?.results || recalled, null, 2);
+      const recalled = await recallMemory(caseId, message, { budget: 'mid' });
+      const memories = recalled?.memories || recalled?.results || [];
+      if (Array.isArray(memories)) {
+        recalledContext = memories
+          .slice(0, 10) // Limit to top 10 memories to prevent token overflow
+          .map((mem, idx) => {
+            const typeStr = mem.type ? `[${mem.type.toUpperCase()}] ` : '';
+            const sourceStr = mem.document_id ? ` (Source: ${mem.document_id})` : '';
+            const text = mem.text || mem.content || '';
+            return `${idx + 1}. ${typeStr}${text}${sourceStr}`;
+          })
+          .join('\n');
+      } else {
+        recalledContext = typeof recalled === 'string' ? recalled : JSON.stringify(recalled);
+      }
     } catch (err) {
       console.warn('Recall failed, proceeding without context:', err.message);
     }
@@ -38,8 +51,13 @@ export const chat = async (req, res) => {
     // Reflect for deeper insights if the question is analytical
     let reflectionContext = '';
     try {
-      const reflected = await reflectMemory(caseId, message);
-      reflectionContext = JSON.stringify(reflected?.reflection || reflected?.result || reflected, null, 2);
+      const reflected = await reflectMemory(caseId, message, { budget: 'mid' });
+      const reflectionText = reflected?.reflection || reflected?.result;
+      if (reflectionText && typeof reflectionText === 'string') {
+        reflectionContext = reflectionText;
+      } else if (reflected) {
+        reflectionContext = JSON.stringify(reflected, null, 2);
+      }
     } catch (err) {
       console.warn('Reflect failed, proceeding without reflection:', err.message);
     }
@@ -60,7 +78,7 @@ ${recalledContext || '(No memories recalled for this query)'}
 === REFLECTION / ANALYSIS ===
 ${reflectionContext || '(No reflection available)'}`;
 
-    const answer = await chatCompletion(systemPrompt, message, { maxTokens: 4096 });
+    const answer = await chatCompletion(systemPrompt, message, { maxTokens: 2048 });
 
     return res.json({
       response: answer,

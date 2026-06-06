@@ -53,7 +53,7 @@ export const chatCompletion = async (systemPrompt, userPrompt, options = {}) => 
         { role: 'user', content: userPrompt },
       ],
       temperature: options.temperature ?? 0.3,
-      max_tokens: options.maxTokens ?? 4096,
+      max_tokens: options.maxTokens ?? 2048,
     })
   );
 
@@ -75,7 +75,7 @@ export const chatCompletionJSON = async (systemPrompt, userPrompt, options = {})
         { role: 'user', content: userPrompt },
       ],
       temperature: options.temperature ?? 0.2,
-      max_tokens: options.maxTokens ?? 4096,
+      max_tokens: options.maxTokens ?? 2048,
       response_format: options.jsonMode !== false ? { type: 'json_object' } : undefined,
     })
   );

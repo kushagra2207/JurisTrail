@@ -94,7 +94,15 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
 
     let updatedTimeline;
     try {
-      updatedTimeline = await updateTimeline(allEvidence, existingTimeline);
+      // Create a simplified version of allEvidence for the timeline agent to save tokens
+      const simplifiedEvidenceForTimeline = allEvidence.map(e => ({
+        id: e.id,
+        type: e.type,
+        content: e.content,
+        dates: e.dates || [],
+        source_document: e.source_document
+      }));
+      updatedTimeline = await updateTimeline(simplifiedEvidenceForTimeline, existingTimeline);
     } catch (err) {
       throw new Error(`Timeline Agent failed: ${err.message}`);
     }
@@ -121,10 +129,45 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
 
     let investigationFindings;
     try {
+      // Create highly compacted versions of all inputs to save tokens
+      const simplifiedEvidenceForAnalysis = allEvidence.map(e => {
+        const clean = {
+          id: e.id,
+          type: e.type,
+          content: e.content,
+          source_document: e.source_document
+        };
+        if (e.dates && e.dates.length > 0) clean.dates = e.dates;
+        if (e.entities && e.entities.length > 0) {
+          clean.entities = e.entities.map(ent => ({ name: ent.name, type: ent.type, desc: ent.desc }));
+        }
+        if (e.locations && e.locations.length > 0) clean.locations = e.locations;
+        if (e.relationships && e.relationships.length > 0) clean.relationships = e.relationships;
+        if (e.key_claims && e.key_claims.length > 0) clean.key_claims = e.key_claims;
+        return clean;
+      });
+
+      const simplifiedTimeline = updatedTimeline.map(t => ({
+        timestamp: t.timestamp,
+        description: t.description,
+        sourceDoc: t.sourceDoc,
+        status: t.status
+      }));
+
+      const simplifiedPrior = priorInvestigations.map(p => ({
+        type: p.type,
+        status: p.status,
+        title: p.title,
+        summary: p.summary,
+        details: p.details,
+        evidenceA: p.evidenceA,
+        evidenceB: p.evidenceB
+      }));
+
       investigationFindings = await analyzeCase(
-        allEvidence,
-        updatedTimeline,
-        priorInvestigations
+        simplifiedEvidenceForAnalysis,
+        simplifiedTimeline,
+        simplifiedPrior
       );
     } catch (err) {
       throw new Error(`Investigation Agent failed: ${err.message}`);
