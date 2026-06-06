@@ -76,61 +76,97 @@ export const retainInvestigationList = async (caseId, investigationItems) => {
 };
 
 /**
- * Helper to parse recalled Hindsight memories with a specific prefix.
+ * Extract the raw results array from a Hindsight recall response.
+ * Hindsight returns `results` (not `memories`) as the top-level key.
  */
-const parseMemories = (recalled, prefix) => {
-  const memories = recalled?.memories || recalled?.results || [];
-  const list = [];
-  for (const mem of memories) {
-    const content = typeof mem === 'string' ? mem : (mem?.content || '');
-    if (content && content.startsWith(prefix)) {
-      try {
-        const parsed = JSON.parse(content.substring(prefix.length));
-        list.push({
-          id: mem.id || parsed.id,
-          ...parsed
-        });
-      } catch (e) {
-        console.warn(`Failed to parse memory contents for prefix ${prefix}:`, e.message);
-      }
-    } else if (content) {
-      // Fallback: try parsing the whole string if it's JSON
-      try {
-        const parsed = JSON.parse(content);
-        list.push({
-          id: mem.id || parsed.id,
-          ...parsed
-        });
-      } catch (e) {
-        // Not JSON
-      }
-    }
-  }
-  return list;
+const extractResults = (recalled) => {
+  return recalled?.results || recalled?.memories || [];
 };
 
 /**
- * Recall and parse all evidence items for a case.
+ * Recall and return all evidence-related memories for a case.
+ * Hindsight is a semantic memory engine — it doesn't store raw strings verbatim.
+ * The recalled memories have their own structure (id, text, type, entities, etc.),
+ * which we map to the shape the frontend expects.
  */
 export const recallEvidenceList = async (caseId) => {
-  const recalled = await recallMemory(caseId, '[EVIDENCE]', { budget: 'high' });
-  return parseMemories(recalled, '[EVIDENCE] ');
+  const recalled = await recallMemory(caseId, 'evidence facts claims witness statements', { budget: 'high' });
+  const results = extractResults(recalled);
+  return results.map(mem => ({
+    id: mem.id,
+    type: mem.type || 'evidence',
+    content: mem.text || '',
+    entities: (mem.entities || []).map(name => ({ name, type: 'other', desc: '' })),
+    source_document: mem.document_id || '',
+    locations: [],
+    dates: [mem.occurred_start, mem.occurred_end].filter(Boolean),
+    relationships: [],
+    key_claims: [mem.text].filter(Boolean),
+  }));
 };
 
 /**
- * Recall and parse all timeline entries for a case.
+ * Recall and return all timeline entries for a case.
+ * Maps Hindsight's semantic memory format to the shape CaseTimeline.jsx expects:
+ *   { id, timestamp, displayTime, precision, title, description, status, sourceDoc }
  */
 export const recallTimelineList = async (caseId) => {
-  const recalled = await recallMemory(caseId, '[TIMELINE]', { budget: 'high' });
-  return parseMemories(recalled, '[TIMELINE] ');
+  const recalled = await recallMemory(caseId, 'timeline chronological events dates when occurred', { budget: 'high' });
+  const results = extractResults(recalled);
+  return results.map(mem => {
+    const text = mem.text || '';
+    // Use occurred_start as timestamp if available
+    const timestamp = mem.occurred_start || mem.mentioned_at || null;
+    let displayTime = 'Unknown Date';
+    if (timestamp) {
+      try {
+        displayTime = new Date(timestamp).toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true,
+        });
+      } catch { /* keep Unknown Date */ }
+    }
+
+    return {
+      id: mem.id,
+      timestamp,
+      displayTime,
+      precision: mem.occurred_start ? 'Approximate' : 'Rough Estimate',
+      title: text.length > 80 ? text.substring(0, 80) + '…' : text,
+      description: text,
+      status: 'normal',
+      sourceDoc: mem.document_id || '',
+    };
+  });
 };
 
 /**
- * Recall and parse all investigation findings for a case.
+ * Recall and return all investigation findings for a case.
+ * Maps Hindsight's semantic memory format to the shape ConflictsInsights.jsx expects:
+ *   { id, type, status, title, summary, details, evidenceA: {source, text}, evidenceB: {source, text} }
  */
 export const recallInvestigationList = async (caseId) => {
-  const recalled = await recallMemory(caseId, '[INVESTIGATION]', { budget: 'high' });
-  return parseMemories(recalled, '[INVESTIGATION] ');
+  const recalled = await recallMemory(caseId, 'investigation contradiction corroboration gap pattern lead analysis', { budget: 'high' });
+  const results = extractResults(recalled);
+  return results.map(mem => {
+    const text = mem.text || '';
+    return {
+      id: mem.id,
+      type: mem.type || 'pattern',
+      status: 'open',
+      title: text.length > 80 ? text.substring(0, 80) + '…' : text,
+      summary: text,
+      details: mem.context || text,
+      evidenceA: {
+        source: mem.document_id || 'Hindsight Memory',
+        text: text,
+      },
+      evidenceB: {
+        source: '',
+        text: '',
+      },
+    };
+  });
 };
 
 /**
