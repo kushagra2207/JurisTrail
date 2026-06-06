@@ -187,14 +187,14 @@ export const uploadDocument = async (req, res) => {
     // Run the 3-agent pipeline asynchronously
     runPipeline(caseId, document.id, pdfText, file.originalname)
       .then((results) => {
-        console.log(`✅ Pipeline complete for document ${document.id}:`, {
+        console.log(`Pipeline complete for document ${document.id}:`, {
           evidence: results.evidence.length,
           timeline: results.timeline.length,
           investigations: results.investigations.length,
         });
       })
       .catch((err) => {
-        console.error(`❌ Pipeline failed for document ${document.id}:`, err.message);
+        console.error(`Pipeline failed for document ${document.id}:`, err.message);
       });
   } catch (error) {
     console.error('Upload document error:', error.message);
@@ -343,14 +343,14 @@ export const reprocessDocument = async (req, res) => {
 
     runPipeline(caseId, docId, pdfText, doc.original_name)
       .then((results) => {
-        console.log(`✅ Reprocess pipeline complete for document ${docId}:`, {
+        console.log(`Reprocess pipeline complete for document ${docId}:`, {
           evidence: results.evidence.length,
           timeline: results.timeline.length,
           investigations: results.investigations.length,
         });
       })
       .catch((err) => {
-        console.error(`❌ Reprocess pipeline failed for document ${docId}:`, err.message);
+        console.error(`Reprocess pipeline failed for document ${docId}:`, err.message);
       });
   } catch (error) {
     console.error('Reprocess document error:', error.message);

@@ -27,7 +27,7 @@ const callWithRetry = async (fn, retries = 5, delay = 6000) => {
                           error.message.includes('too large');
       
       if (isRateLimit && i < retries - 1) {
-        console.warn(`⚠️ [LLM] Rate limited or token limit hit (status ${status || 'unknown'}). Retrying in ${delay / 1000}s... (Attempt ${i + 1}/${retries})`);
+        console.warn(`[LLM] Rate limited or token limit hit (status ${status || 'unknown'}). Retrying in ${delay / 1000}s... (Attempt ${i + 1}/${retries})`);
         await sleep(delay);
         delay *= 2; // exponential backoff
       } else {

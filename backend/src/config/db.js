@@ -15,11 +15,11 @@ const pool = new pg.Pool({
 
 // Test connection on startup
 pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL');
+  console.log('Connected to PostgreSQL');
 });
 
 pool.on('error', (err) => {
-  console.error('❌ PostgreSQL pool error:', err.message);
+  console.error('PostgreSQL pool error:', err.message);
 });
 
 /**
@@ -38,9 +38,9 @@ export const initDb = async () => {
     const schemaPath = path.join(__dirname, '../../db/schema.sql');
     const sql = fs.readFileSync(schemaPath, 'utf8');
     await pool.query(sql);
-    console.log('✅ Database schema initialized successfully');
+    console.log('Database schema initialized successfully');
   } catch (err) {
-    console.error('❌ Failed to initialize database schema:', err.message);
+    console.error('Failed to initialize database schema:', err.message);
   }
 };
 

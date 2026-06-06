@@ -35,12 +35,12 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
       ['processing', documentId]
     );
 
-    console.log(`📄 [Pipeline] Starting for doc "${documentName}" in case ${caseId}`);
+    console.log(`[Pipeline] Starting for doc "${documentName}" in case ${caseId}`);
 
     // ──────────────────────────────────────────────
     // STEP 1: Evidence Agent
     // ──────────────────────────────────────────────
-    console.log('🔍 [Pipeline] Step 1: Extracting evidence...');
+    console.log('[Pipeline] Step 1: Extracting evidence...');
     let newEvidence;
     try {
       newEvidence = await extractEvidence(pdfText, documentName);
@@ -57,7 +57,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // ──────────────────────────────────────────────
     // STEP 2: Timeline Agent
     // ──────────────────────────────────────────────
-    console.log('📅 [Pipeline] Step 2: Updating timeline...');
+    console.log('[Pipeline] Step 2: Updating timeline...');
 
     // Recall all evidence from memory
     let allEvidenceData = [];
@@ -95,7 +95,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     // ──────────────────────────────────────────────
     // STEP 3: Investigation Agent
     // ──────────────────────────────────────────────
-    console.log('🕵️ [Pipeline] Step 3: Running investigation analysis...');
+    console.log('[Pipeline] Step 3: Running investigation analysis...');
 
     // Recall prior investigations
     let priorInvestigations = [];
@@ -135,7 +135,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
       ['completed', documentId]
     );
 
-    console.log(`✅ [Pipeline] Completed for doc "${documentName}"`);
+    console.log(`[Pipeline] Completed for doc "${documentName}"`);
 
     return {
       evidence: newEvidence,
@@ -143,7 +143,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
       investigations: investigationFindings,
     };
   } catch (error) {
-    console.error(`❌ [Pipeline] Failed for doc "${documentName}":`, error.message);
+    console.error(`[Pipeline] Failed for doc "${documentName}":`, error.message);
 
     // Mark document as failed and store the error message
     await query(
