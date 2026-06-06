@@ -1,6 +1,7 @@
 import { query } from '../config/db.js';
 import { formatRelativeTime } from '../utils/helpers.js';
 import { deleteCaseBank } from '../services/hindsight.service.js';
+import cloudinary from '../config/cloudinary.js';
 
 const mapCaseResponse = (row) => ({
   id: row.id,
@@ -147,6 +148,18 @@ export const deleteCase = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Fetch all document Cloudinary public IDs first, before PostgreSQL cascade delete clears them
+    let documentPublicIds = [];
+    try {
+      const docsResult = await query(
+        'SELECT cloudinary_public_id FROM documents WHERE case_id = $1',
+        [id]
+      );
+      documentPublicIds = docsResult.rows.map(row => row.cloudinary_public_id).filter(Boolean);
+    } catch (err) {
+      console.warn(`Could not fetch documents for case ${id} before deletion:`, err.message);
+    }
+
     const result = await query(
       'DELETE FROM cases WHERE id = $1 AND user_id = $2 RETURNING id',
       [id, req.user.id]
@@ -161,6 +174,15 @@ export const deleteCase = async (req, res) => {
       await deleteCaseBank(id);
     } catch (err) {
       console.warn(`Could not delete Hindsight bank for case ${id}:`, err.message);
+    }
+
+    // Safely delete document files from Cloudinary
+    for (const publicId of documentPublicIds) {
+      try {
+        await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+      } catch (err) {
+        console.warn(`Could not delete file ${publicId} from Cloudinary:`, err.message);
+      }
     }
 
     return res.json({ message: 'Case deleted successfully.' });
