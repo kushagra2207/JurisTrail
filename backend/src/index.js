@@ -14,6 +14,7 @@ import documentRoutes from './routes/document.routes.js';
 import agentRoutes from './routes/agent.routes.js';
 
 const app = express();
+app.set('trust proxy', 1); // Trust reverse proxy (Render load balancer) to detect HTTPS/secure connections
 const PORT = process.env.PORT || 5000;
 
 // ──────────────────────────────────────────────

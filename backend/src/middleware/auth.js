@@ -93,11 +93,11 @@ export const authenticate = async (req, res, next) => {
         // Generate a new access token JWT (expires in 15 minutes)
         const newAccessToken = generateToken(user, sessionToken);
 
-        // Set new access token cookie
+        const isProduction = process.env.NODE_ENV === 'production';
         res.cookie('juristrail_access_token', newAccessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
+          secure: isProduction,
+          sameSite: isProduction ? 'none' : 'lax',
           maxAge: 15 * 60 * 1000 // 15 minutes
         });
 

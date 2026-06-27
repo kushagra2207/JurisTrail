@@ -57,17 +57,18 @@ export const signup = async (req, res) => {
     const token = generateToken(user, sessionToken);
 
     // Set HTTP-only cookies
+    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('juristrail_access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000 // 15 minutes
     });
 
     res.cookie('juristrail_session_token', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -131,17 +132,18 @@ export const login = async (req, res) => {
     const token = generateToken(user, sessionToken);
 
     // Set HTTP-only cookies
+    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('juristrail_access_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 15 * 60 * 1000 // 15 minutes
     });
 
     res.cookie('juristrail_session_token', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -208,16 +210,17 @@ export const logout = async (req, res) => {
       );
     }
 
+    const isProduction = process.env.NODE_ENV === 'production';
     res.clearCookie('juristrail_access_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax'
     });
 
     res.clearCookie('juristrail_session_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax'
     });
 
     return res.json({ message: 'Logged out successfully.' });
