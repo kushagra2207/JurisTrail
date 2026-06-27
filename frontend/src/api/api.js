@@ -14,16 +14,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export const api = {
     async request(endpoint, options = {}) {
-        const token = localStorage.getItem('juristrail_token');
         const headers = {
             ...(!options.isMultipart && { 'Content-Type': 'application/json' }),
-            ...(token && { 'Authorization': `Bearer ${token}` }),
             ...options.headers
         };
 
         const config = {
             ...options,
-            headers
+            headers,
+            credentials: 'include'
         };
 
         if (options.body && !options.isMultipart) {
@@ -44,6 +43,7 @@ export const api = {
             method: 'POST',
             body: { name: username, email, password, confirmPassword, firmName: barId }
         }),
+        logout: () => api.request('/auth/logout', { method: 'POST' }),
     },
     cases: {
         list: () => api.request('/cases', { method: 'GET' }),

@@ -47,9 +47,8 @@ export default function App() {
     });
 
     const [view, setView] = useState(() => {
-        const token = localStorage.getItem('juristrail_token');
         const storedUser = localStorage.getItem('juristrail_user');
-        return (token && storedUser) ? 'dashboard' : 'auth';
+        return storedUser ? 'dashboard' : 'auth';
     });
 
     const [authTab, setAuthTab] = useState('login'); // 'login' | 'register'
@@ -129,7 +128,6 @@ export default function App() {
         setAuthError(null);
         try {
             const data = await api.auth.login(loginEmail, loginPassword);
-            localStorage.setItem('juristrail_token', data.token);
             localStorage.setItem('juristrail_user', JSON.stringify(data.user));
             setUser(data.user);
             setView('dashboard');
@@ -147,7 +145,6 @@ export default function App() {
         }
         try {
             const data = await api.auth.register(regUsername, regEmail, regPassword, regConfirmPassword, regBarId);
-            localStorage.setItem('juristrail_token', data.token);
             localStorage.setItem('juristrail_user', JSON.stringify(data.user));
             setUser(data.user);
             setView('dashboard');
@@ -156,7 +153,12 @@ export default function App() {
         }
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await api.auth.logout();
+        } catch (error) {
+            console.error("Logout API failed:", error);
+        }
         localStorage.removeItem('juristrail_token');
         localStorage.removeItem('juristrail_user');
         setUser(null);
