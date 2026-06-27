@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { query } from '../config/db.js';
 import { generateToken } from '../middleware/auth.js';
 
@@ -43,8 +44,32 @@ export const signup = async (req, res) => {
 
     const user = result.rows[0];
 
-    // Generate JWT
-    const token = generateToken(user);
+    // Generate session token
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    await query(
+      `INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)`,
+      [user.id, sessionToken, expiresAt]
+    );
+
+    // Generate JWT containing sessionToken reference
+    const token = generateToken(user, sessionToken);
+
+    // Set HTTP-only cookies
+    res.cookie('juristrail_access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000 // 15 minutes
+    });
+
+    res.cookie('juristrail_session_token', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
 
     return res.status(201).json({
       message: 'Account created successfully.',
@@ -93,8 +118,32 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    // Generate JWT
-    const token = generateToken(user);
+    // Generate session token
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    await query(
+      `INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)`,
+      [user.id, sessionToken, expiresAt]
+    );
+
+    // Generate JWT containing sessionToken reference
+    const token = generateToken(user, sessionToken);
+
+    // Set HTTP-only cookies
+    res.cookie('juristrail_access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000 // 15 minutes
+    });
+
+    res.cookie('juristrail_session_token', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
 
     return res.json({
       message: 'Login successful.',
@@ -141,6 +190,39 @@ export const getMe = async (req, res) => {
     });
   } catch (error) {
     console.error('GetMe error:', error.message);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+/**
+ * POST /api/auth/logout
+ * Deactivate user session in DB and clear cookie.
+ */
+export const logout = async (req, res) => {
+  try {
+    const sessionToken = req.user?.sessionToken;
+    if (sessionToken) {
+      await query(
+        'UPDATE user_sessions SET is_active = FALSE WHERE token = $1',
+        [sessionToken]
+      );
+    }
+
+    res.clearCookie('juristrail_access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    res.clearCookie('juristrail_session_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    return res.json({ message: 'Logged out successfully.' });
+  } catch (error) {
+    console.error('Logout error:', error.message);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 };

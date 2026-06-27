@@ -3,6 +3,7 @@ import { query } from '../config/db.js';
 import { extractTextFromPDF } from '../utils/pdf.js';
 import { runPipeline } from '../services/pipeline.service.js';
 import { formatBytes } from '../utils/helpers.js';
+import { decrypt } from '../utils/crypto.js';
 
 /**
  * Upload a buffer to Cloudinary as a raw file.
@@ -54,9 +55,7 @@ export const listDocuments = async (req, res) => {
 
     const documents = dbDocsResult.rows.map((row) => {
       // Read evidence from PostgreSQL extracted_data (set by pipeline)
-      const extractedData = typeof row.extracted_data === 'string'
-        ? JSON.parse(row.extracted_data)
-        : (row.extracted_data || {});
+      const extractedData = decrypt(row.extracted_data) || {};
       const evidence = extractedData.evidence || [];
 
       // Collect resolved entities (deduplicated)

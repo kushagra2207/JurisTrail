@@ -1,6 +1,7 @@
 import { recallMemory, reflectMemory } from '../services/hindsight.service.js';
 import { chatCompletion } from '../services/llm.service.js';
 import { query } from '../config/db.js';
+import { decrypt } from '../utils/crypto.js';
 
 /**
  * POST /api/cases/:caseId/chat
@@ -142,7 +143,7 @@ export const getTimeline = async (req, res) => {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    const timeline = caseResult.rows[0].case_timeline || [];
+    const timeline = decrypt(caseResult.rows[0].case_timeline) || [];
     return res.json({ data: timeline, error: null });
   } catch (error) {
     console.error('Get timeline error:', error.message);
@@ -167,7 +168,7 @@ export const getInvestigations = async (req, res) => {
       return res.status(404).json({ error: 'Case not found.' });
     }
 
-    const investigations = caseResult.rows[0].case_investigations || [];
+    const investigations = decrypt(caseResult.rows[0].case_investigations) || [];
     return res.json({ data: investigations, error: null });
   } catch (error) {
     console.error('Get investigations error:', error.message);

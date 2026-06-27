@@ -7,6 +7,7 @@ import {
   retainInvestigationList,
 } from './hindsight.service.js';
 import { query } from '../config/db.js';
+import { encrypt, decrypt } from '../utils/crypto.js';
 
 /**
  * Run the full 3-agent pipeline for a newly uploaded document.
@@ -48,9 +49,10 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     console.log(`   Found ${newEvidence.length} evidence items`);
 
     // Persist extracted evidence to PostgreSQL (for FactBox display)
+    const encryptedEvidence = encrypt(JSON.stringify({ evidence: newEvidence }));
     await query(
       'UPDATE documents SET extracted_data = $1 WHERE id = $2',
-      [JSON.stringify({ evidence: newEvidence }), documentId]
+      [encryptedEvidence, documentId]
     );
 
     // Also retain in Hindsight (for chat recall/reflect)
@@ -70,9 +72,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
       [caseId, documentId]
     );
     let allEvidence = allDocsResult.rows.flatMap(r => {
-      const data = typeof r.extracted_data === 'string'
-        ? JSON.parse(r.extracted_data)
-        : (r.extracted_data || {});
+      const data = decrypt(r.extracted_data) || {};
       return data.evidence || [];
     });
     // Ensure newly extracted evidence is included (may not be in DB yet for current doc)
@@ -90,7 +90,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
       'SELECT case_timeline, case_investigations FROM cases WHERE id = $1',
       [caseId]
     );
-    const existingTimeline = caseRecord.rows[0]?.case_timeline || [];
+    const existingTimeline = decrypt(caseRecord.rows[0]?.case_timeline) || [];
 
     let updatedTimeline;
     try {
@@ -109,9 +109,10 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     console.log(`   Generated ${updatedTimeline.length} timeline entries`);
 
     // Save timeline to PostgreSQL (replaces previous timeline)
+    const encryptedTimeline = encrypt(JSON.stringify(updatedTimeline));
     await query(
       'UPDATE cases SET case_timeline = $1 WHERE id = $2',
-      [JSON.stringify(updatedTimeline), caseId]
+      [encryptedTimeline, caseId]
     );
 
     // Also retain in Hindsight (for chat recall/reflect)
@@ -125,7 +126,7 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
     console.log('[Pipeline] Step 3: Running investigation analysis...');
 
     // Read prior investigations from case record (PostgreSQL)
-    const priorInvestigations = caseRecord.rows[0]?.case_investigations || [];
+    const priorInvestigations = decrypt(caseRecord.rows[0]?.case_investigations) || [];
 
     let investigationFindings;
     try {
@@ -176,9 +177,10 @@ export const runPipeline = async (caseId, documentId, pdfText, documentName) => 
 
     // Save investigations to PostgreSQL (replaces previous investigations)
     const contradictionsCount = investigationFindings.filter(f => f.type === 'contradiction').length;
+    const encryptedInvestigations = encrypt(JSON.stringify(investigationFindings));
     await query(
       'UPDATE cases SET case_investigations = $1, contradictions_count = $2, updated_at = NOW() WHERE id = $3',
-      [JSON.stringify(investigationFindings), contradictionsCount, caseId]
+      [encryptedInvestigations, contradictionsCount, caseId]
     );
 
     // Also retain in Hindsight (for chat recall/reflect)
