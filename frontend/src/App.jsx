@@ -28,6 +28,9 @@ import ChatAssistant from './components/workspace/ChatAssistant';
 import CaseTimeline from './components/workspace/CaseTimeline';
 import ConflictsInsights from './components/workspace/ConflictsInsights';
 
+// Server Status Monitoring Badge Component
+import ServerStatusBadge from './components/ServerStatusBadge';
+
 // ==========================================================================
 // CORE APP COMPONENT
 // ==========================================================================
@@ -801,6 +804,9 @@ export default function App() {
                 editCaseDesc={editCaseDesc}
                 setEditCaseDesc={setEditCaseDesc}
             />
+
+            {/* Global Server Status Alert Badge */}
+            <ServerStatusBadge />
 
         </div>
     );

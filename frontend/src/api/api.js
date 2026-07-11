@@ -64,5 +64,8 @@ export const api = {
         deleteDocument: (caseId, docId) => api.request(`/cases/${caseId}/documents/${docId}`, { method: 'DELETE' }),
         getDocumentStatus: (caseId, docId) => api.request(`/cases/${caseId}/documents/${docId}/status`, { method: 'GET' }),
         reprocessDocument: (caseId, docId) => api.request(`/cases/${caseId}/documents/${docId}/reprocess`, { method: 'POST' }),
+    },
+    system: {
+        checkHealth: () => api.request('/health', { method: 'GET' }),
     }
 };
