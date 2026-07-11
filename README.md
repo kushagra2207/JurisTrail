@@ -4,6 +4,8 @@
 
 JurisTrail helps lawyers manage and analyze evidence for litigation cases. Upload PDF evidence documents - witness statements, phone records, GPS logs, financial records - and three AI agents automatically extract structured evidence, build chronological timelines, and identify contradictions, corroborations, and investigative leads. Then chat with your case knowledge in natural language and get citation-backed answers.
 
+Live Demo: https://app.juristrail.workers.dev/
+
 ## Project Structure
 
 This repository is a monorepo containing both the frontend client and the backend API:
