@@ -96,6 +96,9 @@ export default function App() {
     const [uploadProgress, setUploadProgress] = useState(null); // { name, percent, status }
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // Mobile sidebar toggle
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
     const fileInputRef = useRef(null);
     const chatMessagesEndRef = useRef(null);
 
@@ -630,6 +633,7 @@ export default function App() {
                     <DashboardHeader 
                         username={user?.username}
                         onLogout={handleLogout}
+                        onToggleSidebar={() => setMobileSidebarOpen(prev => !prev)}
                     />
 
                     {/* Subheader */}
@@ -646,10 +650,18 @@ export default function App() {
                     {/* Content */}
                     <main className="dashboard-content flex flex-1 overflow-hidden">
                         
+                        {/* Mobile sidebar overlay backdrop */}
+                        <div 
+                            className={`sidebar-overlay ${mobileSidebarOpen ? 'active' : ''}`}
+                            onClick={() => setMobileSidebarOpen(false)}
+                        />
+
                         <DashboardSidebar 
                             searchQuery={searchQuery}
                             setSearchQuery={setSearchQuery}
                             cases={cases}
+                            mobileSidebarOpen={mobileSidebarOpen}
+                            onCloseSidebar={() => setMobileSidebarOpen(false)}
                         />
 
                         <CaseGrid 

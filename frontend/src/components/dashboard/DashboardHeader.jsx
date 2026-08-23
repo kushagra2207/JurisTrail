@@ -1,4 +1,4 @@
-export default function DashboardHeader({ username, onLogout }) {
+export default function DashboardHeader({ username, onLogout, onToggleSidebar }) {
     return (
         <header className="app-header bg-[#190f0a] border-b-2 border-[#c5a059] flex justify-between items-center px-[30px] h-[70px] text-[#fcfbf7] shadow-xl z-20">
             <div className="header-logo flex items-center gap-4">
@@ -13,6 +13,13 @@ export default function DashboardHeader({ username, onLogout }) {
                     <i className="fa-solid fa-gavel mr-1"></i> SUPREME COURT OF INDIA
                 </span>
                 <span className="user-name text-xs font-semibold text-[#e8e3d5]">{username}</span>
+                <button 
+                    className="mobile-menu-btn"
+                    onClick={onToggleSidebar}
+                    title="Toggle sidebar"
+                >
+                    <i className="fa-solid fa-bars"></i>
+                </button>
                 <button 
                     className="btn-logout bg-transparent border-none text-[#d1d5db] cursor-pointer text-lg hover:text-[#8b0000] transition-colors" 
                     onClick={onLogout} 

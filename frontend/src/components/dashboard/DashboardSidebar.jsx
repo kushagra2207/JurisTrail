@@ -1,10 +1,21 @@
-export default function DashboardSidebar({ searchQuery, setSearchQuery, cases }) {
+export default function DashboardSidebar({ searchQuery, setSearchQuery, cases, mobileSidebarOpen, onCloseSidebar }) {
     const totalFacts = cases.reduce((sum, c) => sum + (c.documentsCount * 3), 0);
     const totalConflicts = cases.reduce((sum, c) => sum + c.contradictionsCount, 0);
     const conflictsCount = cases.filter(c => c.contradictionsCount > 0).length;
 
     return (
-        <aside className="dashboard-sidebar w-[300px] bg-[#f4f1ea] border-r border-[#e8e3d5] p-6 flex flex-col gap-5 overflow-y-auto">
+        <aside className={`dashboard-sidebar w-[300px] bg-[#f4f1ea] border-r border-[#e8e3d5] p-6 flex flex-col gap-5 overflow-y-auto ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
+            
+            {/* Close button — visible only on mobile via CSS */}
+            {onCloseSidebar && (
+                <button 
+                    className="mobile-menu-btn self-end"
+                    onClick={onCloseSidebar}
+                    title="Close sidebar"
+                >
+                    <i className="fa-solid fa-xmark"></i>
+                </button>
+            )}
             
             <div className="sidebar-card bg-[#fcfbf7] border border-[#e8e3d5] rounded p-5 shadow-sm">
                 <h3 className="text-xs uppercase font-heading tracking-wider text-[#2a1b12] pb-2 border-b border-[#f4f1ea] mb-4">Case Repository</h3>

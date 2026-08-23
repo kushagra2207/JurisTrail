@@ -1803,3 +1803,476 @@ a:hover {
     padding-top: 15px;
     border-top: 1px solid var(--color-parchment-dark);
 }
+
+/* ==========================================================================
+   MOBILE SIDEBAR TOGGLE BUTTON & OVERLAY
+   ========================================================================== */
+.mobile-menu-btn {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--color-brass-gold);
+    color: var(--color-brass-light);
+    width: 38px;
+    height: 38px;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.mobile-menu-btn:hover {
+    background-color: var(--color-teak-light);
+    color: var(--color-parchment-white);
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(25, 15, 10, 0.6);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* ==========================================================================
+   TABLET BREAKPOINT (≤ 1024px)
+   ========================================================================== */
+@media (max-width: 1024px) {
+
+    /* --- Auth --- */
+    .auth-banner {
+        flex: 1;
+        padding: 40px;
+    }
+
+    .auth-form-container {
+        flex: 1;
+        padding: 30px;
+    }
+
+    .brand-title {
+        font-size: 30px;
+        letter-spacing: 3px;
+    }
+
+    .legal-quote {
+        font-size: 16px;
+    }
+
+    /* --- Dashboard --- */
+    .app-header {
+        padding: 12px 20px;
+    }
+
+    .dashboard-subheader {
+        padding: 16px 20px;
+    }
+
+    .dashboard-sidebar {
+        width: 250px;
+        padding: 18px;
+    }
+
+    .cases-area {
+        padding: 20px;
+    }
+
+    .cases-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 18px;
+    }
+
+    /* --- Workspace --- */
+    .workspace-header {
+        padding: 10px 18px;
+    }
+
+    .pane-left {
+        width: 35%;
+        padding: 16px;
+    }
+
+    .pane-right {
+        width: 65%;
+    }
+}
+
+/* ==========================================================================
+   MOBILE BREAKPOINT (≤ 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+
+    /* --- Global --- */
+    body {
+        font-size: 13px;
+    }
+
+    .page-container {
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+    }
+
+    /* --- Auth Screen --- */
+    .auth-layout {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .auth-banner {
+        display: none;
+    }
+
+    .auth-form-container {
+        flex: 1;
+        padding: 20px 16px;
+        min-height: 100vh;
+        border-left: none;
+    }
+
+    .auth-card {
+        max-width: 100%;
+        max-height: none;
+    }
+
+    .auth-form {
+        padding: 24px 18px;
+    }
+
+    .tab-btn {
+        font-size: 11px;
+        padding: 14px 0;
+    }
+
+    /* --- App Header (Dashboard) --- */
+    .app-header {
+        padding: 10px 16px;
+        height: 60px;
+    }
+
+    .header-logo {
+        gap: 10px;
+    }
+
+    .logo-icon {
+        font-size: 22px;
+    }
+
+    .logo-title {
+        font-size: 16px;
+        letter-spacing: 1.5px;
+    }
+
+    .logo-subtitle {
+        font-size: 8px;
+        letter-spacing: 1px;
+    }
+
+    .header-user {
+        gap: 10px;
+    }
+
+    .court-badge {
+        display: none;
+    }
+
+    .user-name {
+        font-size: 12px;
+    }
+
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    /* --- Dashboard Subheader --- */
+    .dashboard-subheader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    .subheader-left h1 {
+        font-size: 18px;
+    }
+
+    .dashboard-subheader .btn-gold,
+    .dashboard-subheader .btn {
+        width: 100%;
+    }
+
+    /* --- Dashboard Content & Sidebar --- */
+    .dashboard-content {
+        flex-direction: column;
+    }
+
+    .dashboard-sidebar {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 200;
+        padding: 20px;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+        border-right: 2px solid var(--color-brass-gold);
+        background-color: var(--color-parchment-cream);
+    }
+
+    .dashboard-sidebar.mobile-open {
+        display: flex;
+    }
+
+    /* --- Cases Grid --- */
+    .cases-area {
+        padding: 16px;
+        overflow-y: auto;
+    }
+
+    .cases-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .case-card {
+        padding: 16px;
+    }
+
+    /* --- Workspace Header --- */
+    .workspace-header {
+        padding: 8px 12px;
+        height: auto;
+        min-height: 50px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .workspace-nav-left {
+        gap: 10px;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .btn-back {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .workspace-case-meta {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .workspace-case-meta h2 {
+        font-size: 14px;
+        width: 100%;
+    }
+
+    .court-tag, .docket-tag {
+        font-size: 9px;
+        padding: 1px 6px;
+    }
+
+    .engine-badge {
+        display: none;
+    }
+
+    /* --- Workspace Body (Stacked Panes) --- */
+    .workspace-body {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .pane-left {
+        width: 100%;
+        border-right: none;
+        border-bottom: 2px solid var(--color-brass-gold);
+        padding: 14px;
+        max-height: 45vh;
+        overflow-y: auto;
+    }
+
+    .pane-right {
+        width: 100%;
+        min-height: 50vh;
+    }
+
+    /* --- Workspace Tabs --- */
+    .workspace-tabs {
+        flex-wrap: nowrap;
+    }
+
+    .workspace-tab-btn {
+        font-size: 9px;
+        padding: 10px 4px;
+        letter-spacing: 0;
+    }
+
+    .workspace-tab-btn i {
+        margin-right: 3px;
+    }
+
+    /* --- Upload Zone --- */
+    .upload-zone {
+        padding: 18px 14px;
+    }
+
+    .upload-icon {
+        font-size: 24px;
+    }
+
+    /* --- Document Cards --- */
+    .document-card {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .doc-details {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    /* --- Fact Box --- */
+    .fact-box-panel {
+        padding: 12px;
+    }
+
+    .entities-tags {
+        gap: 4px;
+    }
+
+    .entity-tag {
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+
+    /* --- Chat --- */
+    .chat-messages {
+        padding: 14px;
+        gap: 14px;
+    }
+
+    .chat-welcome-card {
+        max-width: 100%;
+        padding: 16px;
+    }
+
+    .chat-msg {
+        max-width: 92%;
+    }
+
+    .msg-bubble {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .chat-input-area {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .chat-input-area input {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .btn-chat-submit {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    /* --- Timeline --- */
+    .timeline-container {
+        padding: 16px;
+    }
+
+    .timeline-flow {
+        padding-left: 24px;
+    }
+
+    .timeline-card {
+        padding: 12px;
+    }
+
+    .timeline-source {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    /* --- Insights --- */
+    .insights-container {
+        padding: 16px;
+    }
+
+    .insight-item-header {
+        padding: 12px 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .insight-body {
+        padding: 14px;
+    }
+
+    .insight-evidence-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .evidence-box {
+        padding: 10px;
+    }
+
+    /* --- Modals --- */
+    .modal-overlay {
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 5vh;
+    }
+
+    .modal-card {
+        max-width: 95vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        padding: 12px 16px;
+    }
+
+    .modal-header h2 {
+        font-size: 14px;
+    }
+
+    .modal-card form {
+        padding: 16px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+    }
+
+    /* --- Server Status Badge --- */
+    .server-status-badge {
+        bottom: 10px;
+        right: 10px;
+    }
+}
