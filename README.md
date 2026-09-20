@@ -7,7 +7,7 @@ JurisTrail helps lawyers manage and analyze evidence for litigation cases. Uploa
 ## Links
 
 - Live Demo: https://juristrail.vercel.app/
-- Video Demo: https://youtu.be/dtvKqL4qUUc
+- Video Demo: https://youtu.be/WvO_irkL0Gc
 
 ## Project Structure
 
